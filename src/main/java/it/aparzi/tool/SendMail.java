@@ -1,3 +1,5 @@
+package it.aparzi.tool;
+
 import javax.activation.DataHandler;
 import javax.activation.FileDataSource;
 import javax.mail.*;
@@ -62,8 +64,9 @@ public class SendMail {
                     msg.setContent(multipart);
 
                     // Send the msg with attachment.
+                    System.out.println("*************** ATTENDERE ***************");
                     Transport.send(msg);
-                    System.out.println("*************** EMAIL INVIATA CORRETTAMENTE ***************");
+                    System.out.println("*************** EMAIL INVIATA CORRETTAMENTE *************** \n\n");
                 } catch (MessagingException e) {
                     e.printStackTrace();
                 }
