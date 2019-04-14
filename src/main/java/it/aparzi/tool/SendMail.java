@@ -7,47 +7,52 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
-import java.io.File;
+import java.io.*;
 import java.util.*;
 
 public class SendMail {
 
-    private final static String USERNAME = "XXX@gmail.com";
-    private final static String PASSWORD = "XXXXXXXXXX";
-
-    private final static String FROM = "XXXX@gmail.com";
-    private final static String TO = "XXXX@gmail.com";
-    private final static String SUBJECT = "Automatic Email";
-    private final static String BODY = "This is a important message with attachment.";
-
-    private final static String PATH_DIRECTORY = "C:/temp/";
-
     public static void main(String[] args) {
         SendMail demo = new SendMail();
-        demo.sendEmail();
+        try {
+            demo.sendEmail();
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("********* ERRORE LETTURA PATH DIRECTORY *********");
+        }
     }
 
-    private void sendEmail() {
-        File folder = new File(PATH_DIRECTORY);
+    private void sendEmail() throws IOException {
+        Properties extProp = getExternalProperties();
+        if (Objects.isNull(extProp)) {
+            System.out.println("********* NON E' STATO POSSIBILE CARICARE PROPRIETà ESTERNE *********");
+            return;
+        }
+
+        System.out.print("Inserire il PATH della directory dove risiedono i file: ");
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        String path = reader.readLine();
+
+        File folder = new File(path);
         File[] listOfFiles = folder.listFiles();
 
         Optional.ofNullable(listOfFiles).ifPresent(lof -> {
             List<File> files = Arrays.asList(lof);
             files.forEach(file -> {
                 try {
-                    InternetAddress fromAddress = new InternetAddress(FROM);
-                    InternetAddress toAddress = new InternetAddress(TO);
+                    InternetAddress fromAddress = new InternetAddress(extProp.getProperty("mail.from"));
+                    InternetAddress toAddress = new InternetAddress(extProp.getProperty("mail.to"));
 
                     // Create an Internet mail msg.
-                    MimeMessage msg = new MimeMessage(getSession());
+                    MimeMessage msg = new MimeMessage(getSession(extProp));
                     msg.setFrom(fromAddress);
                     msg.setRecipient(Message.RecipientType.TO, toAddress);
-                    msg.setSubject(SUBJECT);
+                    msg.setSubject(extProp.getProperty("mail.subject"));
                     msg.setSentDate(new Date());
 
                     // Set the email msg text.
                     MimeBodyPart messagePart = new MimeBodyPart();
-                    messagePart.setText(BODY);
+                    messagePart.setText(extProp.getProperty("mail.body"));
 
                     // Set the email attachment file
                     FileDataSource fileDataSource = new FileDataSource(file.getAbsolutePath());
@@ -74,7 +79,7 @@ public class SendMail {
         });
     }
 
-    private Session getSession() {
+    private Session getSession(Properties extProp) {
         Properties props = new Properties();
         props.put("mail.smtp.host", "smtp.gmail.com");
         props.put("mail.transport.protocol", "smtp");
@@ -84,11 +89,24 @@ public class SendMail {
 
         Session session = Session.getDefaultInstance(props, new javax.mail.Authenticator() {
             protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(USERNAME, PASSWORD);
+                return new PasswordAuthentication(extProp.getProperty("mail.username"), extProp.getProperty("mail.password"));
             }
         });
 
         return session;
+    }
+
+    private Properties getExternalProperties() {
+        try {
+            InputStream input = getClass().getClassLoader().getResourceAsStream("config.properties");
+            Properties prop = new Properties();
+            // load a properties file
+            prop.load(input);
+            return prop;
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            return null;
+        }
     }
 
 }
